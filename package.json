@@ -1,0 +1,20 @@
+{
+  "name": "foodshare-vyatsu",
+  "version": "1.0.0",
+  "private": true,
+  "description": "🌿 FoodShare — Сервис спасения еды и фудшеринга (ВятГУ)",
+  "scripts": {
+    "install:all": "npm --prefix server install && npm --prefix server run db:generate && npm --prefix client install",
+    "setup:extensions": "node scripts/install-extensions.js",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "build:server": "npm --prefix server run build",
+    "build:client": "npm --prefix client run build",
+    "build": "npm run build:server && npm run build:client",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "prettier": "^3.3.3"
+  }
+}
