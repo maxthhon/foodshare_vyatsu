@@ -53,6 +53,7 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
           script_stop: true
+          command_timeout: 30m
           script: |
             # Переходим в директорию проекта
             cd /home/${{ secrets.SSH_USER }}/foodshare_vyatsu
@@ -65,8 +66,12 @@ jobs:
             docker compose down --remove-orphans
             docker compose up -d --build
 
+            # Небольшая пауза для готовности PostgreSQL перед накатом схемы
+            sleep 3
+
             # Применяем схему Prisma (db push / migrate)
-            docker compose exec -T server npx prisma db push
+            docker compose exec -T server npx prisma db push --skip-generate
 
             # Очищаем старые неиспользуемые Docker-образы (экономия диска)
             docker image prune -f
+
