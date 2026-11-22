@@ -1,49 +1,293 @@
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
 }
 
-generator client {
-  provider = "prisma-client-js"
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  CUSTOMER
+  ESTABLISHMENT
+}
+
+enum EstablishmentStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+}
+
+enum EstablishmentCategory {
+  COFFEE_SHOP
+  BAKERY
+  RESTAURANT
+  STORE
+}
+
+enum OfferType {
+  SURPRISE_BOX
+  ITEM
+}
+
+enum OfferSize {
+  S
+  M
+  L
+}
+
+enum OfferCategory {
+  BAKED_GOODS
+  DESSERTS
+  PREPARED_MEALS
+  SALADS
+  GROCERIES
+}
+
+enum PickupMethod {
+  PICKUP
+}
+
+enum OrderStatus {
+  RESERVED
+  PAID
+  READY
+  COMPLETED
+  CANCELLED
+  EXPIRED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  REFUNDED
 }
 
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  name      String
-  role      String   @default("BUYER")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  orders    Order[]
-}
-
-model Restaurant {
-  id        String   @id @default(uuid())
-  name      String
-  address   String
-  lat       Float
-  lng       Float
-  createdAt DateTime @default(now())
-  boxes     Box[]
-}
-
-model Box {
-  id            String     @id @default(uuid())
-  title         String
-  price         Float
-  discountPrice Float
-  restaurantId  String
-  restaurant    Restaurant @relation(fields: [restaurantId], references: [id])
+  id            String         @id @default(uuid()) @db.Uuid
+  email         String         @unique
+  name          String
+  passwordHash  String
+  role          Role           @default(CUSTOMER)
+  createdAt     DateTime       @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime       @updatedAt @db.Timestamptz(3)
+  establishment Establishment?
+  allergens     UserAllergen[]
   orders        Order[]
+  reviews       Review[]
+  favorites     Favorite[]
+}
+
+model Establishment {
+  id              String                  @id @default(uuid()) @db.Uuid
+  ownerId         String                  @unique @db.Uuid
+  owner           User                    @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  name            String
+  description     String?
+  logoUrl         String?
+  address         String?
+  latitude        Float?
+  longitude       Float?
+  publicPhone     String?
+  publicEmail     String?
+  businessHours   Json?
+  categories      EstablishmentCategory[] @default([])
+  status          EstablishmentStatus     @default(PENDING)
+  deliveryEnabled Boolean                 @default(false)
+  createdAt       DateTime                @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime                @updatedAt @db.Timestamptz(3)
+  offers          Offer[]
+  templates       OfferTemplate[]
+  orders          Order[]
+  reviews         Review[]
+
+  @@index([status, latitude, longitude])
+}
+
+model OfferTemplate {
+  id              String             @id @default(uuid()) @db.Uuid
+  establishmentId String             @db.Uuid
+  establishment   Establishment      @relation(fields: [establishmentId], references: [id], onDelete: Restrict)
+  name            String
+  description     String?
+  type            OfferType
+  size            OfferSize?
+  category        OfferCategory
+  originalPrice   Int
+  price           Int
+  weightGrams     Int
+  createdAt       DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime           @updatedAt @db.Timestamptz(3)
+  allergens       TemplateAllergen[]
+  offers          Offer[]
+
+  @@index([establishmentId])
+}
+
+model Offer {
+  id                String          @id @default(uuid()) @db.Uuid
+  establishmentId   String          @db.Uuid
+  establishment     Establishment   @relation(fields: [establishmentId], references: [id], onDelete: Restrict)
+  templateId        String?         @db.Uuid
+  template          OfferTemplate?  @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  name              String
+  description       String?
+  type              OfferType
+  size              OfferSize?
+  category          OfferCategory
+  originalPrice     Int
+  price             Int
+  weightGrams       Int
+  quantity          Int
+  remainingQuantity Int
+  pickupStartsAt    DateTime        @db.Timestamptz(3)
+  pickupEndsAt      DateTime        @db.Timestamptz(3)
+  isAvailable       Boolean         @default(true)
+  archivedAt        DateTime?       @db.Timestamptz(3)
+  createdAt         DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime        @updatedAt @db.Timestamptz(3)
+  allergens         OfferAllergen[]
+  orderItems        OrderItem[]
+  favorites         Favorite[]
+
+  @@index([establishmentId, pickupEndsAt])
+  @@index([category, price])
+  @@index([pickupEndsAt, id])
+  @@index([templateId])
+}
+
+model Allergen {
+  id        String             @id
+  name      String
+  users     UserAllergen[]
+  offers    OfferAllergen[]
+  templates TemplateAllergen[]
+}
+
+model UserAllergen {
+  userId     String   @db.Uuid
+  allergenId String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  allergen   Allergen @relation(fields: [allergenId], references: [id], onDelete: Restrict)
+
+  @@id([userId, allergenId])
+  @@index([allergenId])
+}
+
+model OfferAllergen {
+  offerId    String   @db.Uuid
+  allergenId String
+  offer      Offer    @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  allergen   Allergen @relation(fields: [allergenId], references: [id], onDelete: Restrict)
+
+  @@id([offerId, allergenId])
+  @@index([allergenId])
+}
+
+model TemplateAllergen {
+  templateId String        @db.Uuid
+  allergenId String
+  template   OfferTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  allergen   Allergen      @relation(fields: [allergenId], references: [id], onDelete: Restrict)
+
+  @@id([templateId, allergenId])
+  @@index([allergenId])
 }
 
 model Order {
-  id        String   @id @default(uuid())
-  userId    String
-  boxId     String
-  pinCode   String
-  status    String   @default("RESERVED")
-  user      User     @relation(fields: [userId], references: [id])
-  box       Box      @relation(fields: [boxId], references: [id])
-  createdAt DateTime @default(now())
+  id                          String        @id @default(uuid()) @db.Uuid
+  customerId                  String        @db.Uuid
+  customer                    User          @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  establishmentId             String        @db.Uuid
+  establishment               Establishment @relation(fields: [establishmentId], references: [id], onDelete: Restrict)
+  status                      OrderStatus   @default(RESERVED)
+  pickupMethod                PickupMethod  @default(PICKUP)
+  pickupStartsAt              DateTime      @db.Timestamptz(3)
+  pickupEndsAt                DateTime      @db.Timestamptz(3)
+  expiresAt                   DateTime      @db.Timestamptz(3)
+  totalAmount                 Int
+  commissionBps               Int
+  commissionAmount            Int
+  idempotencyKey              String
+  requestHash                 String
+  pickupPinHash               String?
+  pickupQrHash                String?       @unique
+  pickupCredentialsCiphertext String?
+  completedAt                 DateTime?     @db.Timestamptz(3)
+  createdAt                   DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt                   DateTime      @updatedAt @db.Timestamptz(3)
+  items                       OrderItem[]
+  payments                    Payment[]
+  review                      Review?
+
+  @@unique([customerId, idempotencyKey])
+  @@index([customerId, createdAt, id])
+  @@index([establishmentId, status, createdAt, id])
+  @@index([establishmentId, completedAt])
+  @@index([status, expiresAt])
+}
+
+model OrderItem {
+  id              String   @id @default(uuid()) @db.Uuid
+  orderId         String   @db.Uuid
+  order           Order    @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  offerId         String   @db.Uuid
+  offer           Offer    @relation(fields: [offerId], references: [id], onDelete: Restrict)
+  offerName       String
+  quantity        Int
+  unitPrice       Int
+  unitWeightGrams Int
+  pickupStartsAt  DateTime @db.Timestamptz(3)
+  pickupEndsAt    DateTime @db.Timestamptz(3)
+
+  @@unique([orderId, offerId])
+  @@index([offerId])
+}
+
+model Payment {
+  id             String        @id @default(uuid()) @db.Uuid
+  orderId        String        @db.Uuid
+  order          Order         @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  provider       String        @default("MOCK")
+  status         PaymentStatus @default(PENDING)
+  amount         Int
+  idempotencyKey String
+  requestHash    String
+  refundedAt     DateTime?     @db.Timestamptz(3)
+  createdAt      DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime      @updatedAt @db.Timestamptz(3)
+
+  @@unique([orderId, idempotencyKey])
+  @@index([orderId, createdAt])
+}
+
+model Review {
+  id              String        @id @default(uuid()) @db.Uuid
+  orderId         String        @unique @db.Uuid
+  order           Order         @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  customerId      String        @db.Uuid
+  customer        User          @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  establishmentId String        @db.Uuid
+  establishment   Establishment @relation(fields: [establishmentId], references: [id], onDelete: Restrict)
+  rating          Int
+  comment         String?
+  createdAt       DateTime      @default(now()) @db.Timestamptz(3)
+
+  @@index([establishmentId, createdAt, id])
+  @@index([customerId])
+}
+
+model Favorite {
+  userId    String   @db.Uuid
+  offerId   String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  offer     Offer    @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+
+  @@id([userId, offerId])
+  @@index([userId, createdAt, offerId])
+  @@index([offerId])
 }

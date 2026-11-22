@@ -1,52 +1,71 @@
 services:
   postgres:
-    image: postgres:16-alpine
-    container_name: foodshare_db
-    restart: always
+    image: postgres:17-alpine
     environment:
-      POSTGRES_USER: foodshare_user
-      POSTGRES_PASSWORD: secretpassword
-      POSTGRES_DB: foodshare_db
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in .env}
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-15432}:5432"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 3s
+      retries: 12
 
   redis:
-    image: redis:7-alpine
-    container_name: foodshare_redis
-    restart: always
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "yes"]
     ports:
-      - "6379:6379"
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
 
   server:
-    build:
-      context: ./server
-      dockerfile: Dockerfile
-    container_name: foodshare_backend
-    restart: always
-    ports:
-      - "${SERVER_PORT:-5001}:5000"
+    build: ./server
     environment:
-      PORT: 5000
       NODE_ENV: production
-      DATABASE_URL: "postgresql://foodshare_user:secretpassword@postgres:5432/foodshare_db?schema=public"
-      REDIS_URL: "redis://redis:6379"
-      JWT_SECRET: "super-secret-jwt-key-change-in-production"
+      SERVER_PORT: "3000"
+      CLIENT_PORT: ${CLIENT_PORT:-8080}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      REDIS_URL: redis://redis:6379
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?Run node scripts/init-local-env.mjs}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?Run node scripts/init-local-env.mjs}
+      PICKUP_SECRET: ${PICKUP_SECRET:?Run node scripts/init-local-env.mjs}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      SEED_PASSWORD: ${SEED_PASSWORD:-}
+      RESERVATION_TTL_MINUTES: ${RESERVATION_TTL_MINUTES:-15}
+      PLATFORM_COMMISSION_PERCENT: ${PLATFORM_COMMISSION_PERCENT:-18}
+      CO2_KG_PER_KG: ${CO2_KG_PER_KG:-2.5}
+    ports:
+      - "127.0.0.1:${SERVER_PORT:-3000}:3000"
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r => { if (!r.ok) process.exit(1) }).catch(() => process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
 
   client:
-    build:
-      context: ./client
-      dockerfile: Dockerfile
-    container_name: foodshare_frontend
-    restart: always
+    build: ./client
     ports:
-      - "80:80"
+      - "127.0.0.1:${CLIENT_PORT:-8080}:80"
     depends_on:
-      - server
+      server:
+        condition: service_healthy
 
 volumes:
-  pgdata:
+  postgres_data:
+  redis_data:
