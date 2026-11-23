@@ -61,8 +61,8 @@ jobs:
             git reset --hard
             git pull origin main
 
-            # Генерируем недостающие секреты в .env (JWT_ACCESS_SECRET, etc.)
-            node scripts/init-local-env.mjs
+            # Проверяем и генерируем недостающие секреты в .env через bash/openssl
+            bash scripts/ensure-env.sh
 
             # Собираем и поднимаем контейнеры в фоне
             docker compose down --remove-orphans
