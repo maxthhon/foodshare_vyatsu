@@ -18,7 +18,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: 'npm'
           cache-dependency-path: |
             server/package.json
@@ -28,7 +28,6 @@ jobs:
         run: |
           cd server
           npm ci
-          npx prisma generate
           npm run build
 
       - name: Install dependencies & Build Client
@@ -69,8 +68,9 @@ jobs:
             # Небольшая пауза для готовности PostgreSQL перед накатом схемы
             sleep 3
 
-            # Применяем схему Prisma (db push / migrate)
-            docker compose exec -T server npx prisma db push --skip-generate
+            # Применяем схему Prisma (db:migrate или fallback db push)
+            docker compose exec -T server npm run db:migrate || docker compose exec -T server npx prisma db push --skip-generate
+
 
             # Очищаем старые неиспользуемые Docker-образы (экономия диска)
             docker image prune -f
