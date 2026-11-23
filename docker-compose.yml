@@ -64,8 +64,9 @@ services:
       args:
         VITE_YANDEX_MAPS_API_KEY: ${VITE_YANDEX_MAPS_API_KEY:-}
     ports:
-      - "127.0.0.1:${CLIENT_PORT:-8080}:80"
+      - "${CLIENT_PORT:-80}:80"
     depends_on:
+
       server:
         condition: service_healthy
 
