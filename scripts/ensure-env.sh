@@ -29,7 +29,16 @@ if ! grep -q "^POSTGRES_PASSWORD=" "$ENV_FILE" 2>/dev/null; then
   echo "Generated secure POSTGRES_PASSWORD"
 fi
 
-# 3. Список секретов, которые должны быть заполнены
+# 3. Гарантируем, что порт фронтенда CLIENT_PORT равен 80 (так как порт 8080 занят на хосте)
+if grep -q "^CLIENT_PORT=" "$ENV_FILE" 2>/dev/null; then
+  sed -i "s|^CLIENT_PORT=.*|CLIENT_PORT=80|" "$ENV_FILE"
+else
+  echo "CLIENT_PORT=80" >> "$ENV_FILE"
+fi
+echo "Enforced CLIENT_PORT=80"
+
+# 4. Список секретов, которые должны быть заполнены
+
 REQUIRED_KEYS=(
   "JWT_ACCESS_SECRET"
   "JWT_REFRESH_SECRET"
