@@ -7,12 +7,15 @@ import { VitePWA } from 'vite-plugin-pwa';
 const envDir = fileURLToPath(new URL('..', import.meta.url));
 
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, envDir, ['API_PROXY_TARGET', 'SERVER_PORT']);
+  const env = loadEnv(mode, envDir, ['API_PROXY_TARGET', 'SERVER_PORT', 'VITE_YANDEX_MAPS_API_KEY']);
   const proxy = {
     '/api': env.API_PROXY_TARGET || `http://127.0.0.1:${env.SERVER_PORT || '3000'}`,
   };
 
   return {
+    define: {
+      'import.meta.env.VITE_YANDEX_MAPS_API_KEY': JSON.stringify(env.VITE_YANDEX_MAPS_API_KEY ?? ''),
+    },
     plugins: [
       react(),
       tailwindcss(),

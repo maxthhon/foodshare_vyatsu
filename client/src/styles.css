@@ -209,11 +209,15 @@ input[type=checkbox] { accent-color: #2c6343; width: 17px; height: 17px; flex: 0
 .impact p { color: var(--muted); margin-top: 4px; }
 .map-layout { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); }
 .map-holder { position: relative; }
-.map-surface { height: clamp(360px, 65vh, 600px); width: 100%; border: 1px solid #d8e5d7; background: #e7eee3; border-radius: 16px; isolation: isolate; }
+.map-surface { height: clamp(360px, 65vh, 600px); width: 100%; border: 1px solid #d8e5d7; background: #e7eee3; border-radius: 16px; isolation: isolate; overflow: hidden; }
 .map-error { position: absolute; bottom: 23px; left: 14px; right: 14px; background: #fffef1ee; padding: 8px 11px; border-radius: 8px; font-size: .85rem; color: #624f27; pointer-events: none; }
-.leaflet-food-pin span { width: 28px; height: 28px; display: block; border: 3px solid #fff; border-radius: 50% 50% 50% 20%;
+.map-zoom { position: absolute; top: 10px; left: 10px; display: grid; gap: 4px; }
+.map-zoom .icon-button { width: 36px; min-height: 36px; }
+.yandex-food-pin { transform: translate(-50%, -100%); padding: 0; border: 0; background: transparent; }
+.yandex-user-dot { width: 16px; height: 16px; border: 3px solid #fff; border-radius: 50%; background: #235aa8; transform: translate(-50%, -50%); }
+.leaflet-food-pin span, .yandex-food-pin span { width: 28px; height: 28px; display: block; border: 3px solid #fff; border-radius: 50% 50% 50% 20%;
   background: #245a3b; transform: rotate(-45deg); box-shadow: 1px 2px 5px #152d2575; }
-.leaflet-food-pin span::after { content: ''; display: block; width: 8px; height: 8px; border-radius: 50%; margin: 7px; background: #dcef9c; }
+.leaflet-food-pin span::after, .yandex-food-pin span::after { content: ''; display: block; width: 8px; height: 8px; border-radius: 50%; margin: 7px; background: #dcef9c; }
 .map-sidebar { display: grid; gap: 12px; }
 .map-item { border: 1px solid var(--line); border-radius: 10px; padding: 11px; display: grid; gap: 4px; font-size: .93rem; }
 .map-item.selected { border-color: #759c80; background: #f5f9f2; }

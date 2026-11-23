@@ -28,6 +28,7 @@
     "@types/react": "19.0.14",
     "@types/react-dom": "19.0.6",
     "@vitejs/plugin-react": "4.5.2",
+    "@yandex/ymaps3-types": "1.0.22020827",
     "tailwindcss": "4.1.11",
     "typescript": "5.8.3",
     "vite": "6.4.6",
