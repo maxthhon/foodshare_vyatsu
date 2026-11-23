@@ -61,9 +61,13 @@ jobs:
             git reset --hard
             git pull origin main
 
+            # Генерируем недостающие секреты в .env (JWT_ACCESS_SECRET, etc.)
+            node scripts/init-local-env.mjs
+
             # Собираем и поднимаем контейнеры в фоне
             docker compose down --remove-orphans
             docker compose up -d --build
+
 
             # Небольшая пауза для готовности PostgreSQL перед накатом схемы
             sleep 3
